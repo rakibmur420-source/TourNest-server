@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import jwt, { SignOptions } from "jsonwebtoken";
 import User from "../models/User";
+import { AuthRequest } from "../types";
 
 const generateToken = (id: string, email: string, role: string): string => {
   const options: SignOptions = {
@@ -70,9 +71,9 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getMe = async (req: Request, res: Response) => {
+export const getMe = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     const user = await User.findById(userId).select("-password");
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -80,5 +81,62 @@ export const getMe = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch user", error: (error as Error).message });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, photoURL } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: "Name cannot be empty" });
+    }
+
+    const user = await User.findById(req.user?.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    user.name = name.trim();
+    if (photoURL !== undefined) user.photoURL = photoURL;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: { id: user._id, name: user.name, email: user.email, photoURL: user.photoURL, role: user.role },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update profile", error: (error as Error).message });
+  }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: "Current and new password are required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user?.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to change password", error: (error as Error).message });
   }
 };

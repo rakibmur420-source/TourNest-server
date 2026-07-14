@@ -8,16 +8,16 @@ import {
   deletePackage,
   addReview,
 } from "../controllers/package.controller";
-import { verifyToken } from "../middleware/auth";
+import { verifyToken, verifyAdmin } from "../middleware/auth";
 
 const router = Router();
 
 // IMPORTANT: specific routes must come before /:id to avoid Express matching them as an id param
 router.get("/featured", getFeaturedPackages);
-router.get("/manage/my", verifyToken, getMyPackages);
+router.get("/manage/my", verifyToken, verifyAdmin, getMyPackages);
 
 router.get("/", getPackages);
-router.post("/", verifyToken, createPackage);
+router.post("/", verifyToken, verifyAdmin, createPackage);
 
 router.get("/:id", getPackageById);
 router.delete("/:id", verifyToken, deletePackage);
