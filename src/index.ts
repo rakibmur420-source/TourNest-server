@@ -2,10 +2,12 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db";
+import { initFirebaseAdmin } from "./config/firebaseAdmin";
 import authRoutes from "./routes/auth.routes";
 import packageRoutes from "./routes/package.routes";
 
 dotenv.config();
+initFirebaseAdmin();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
